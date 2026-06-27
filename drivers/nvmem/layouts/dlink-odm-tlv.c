@@ -30,6 +30,14 @@ struct dlink_odm_tlv {
 	u8 len;
 } __packed;
 
+static int dlink_odm_tlv_parse(struct device *dev,
+                        u8 *data,
+                        size_t len,
+                        struct nvmem_device *nvmem)
+{
+	return 0;
+}
+
 static const char *dlink_odm_tlv_cell_name(u8 type)
 {
 	switch (type) {
@@ -160,6 +168,7 @@ static int dlink_odm_tlv_parse_table(struct nvmem_layout *layout)
 	u8 *table, *data;
 	int ret;
 
+	return dlink_odm_tlv_parse(dev, data, data_len, nvmem);
 	ret = nvmem_device_read(nvmem, 0, sizeof(hdr), &hdr);
 	if (ret < 0)
 		return ret;
