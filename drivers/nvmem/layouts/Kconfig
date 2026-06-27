@@ -37,6 +37,16 @@ config NVMEM_LAYOUT_U_BOOT_ENV
 
 	  If unsure, say N.
 
+config NVMEM_LAYOUT_DLINK_ODM_TLV
+	tristate "D-Link ODM partition TLV layout"
+	select CRC32
+	help
+	  Say Y here if you want to support the D-Link ODM TLV layout.
+	  It is used by the D-Link Aquila series.
+	  Currently the following devices use it: E30, M30, M60, M32, R32.
+
+	  If unsure, say N.
+
 endmenu
 
 endif
