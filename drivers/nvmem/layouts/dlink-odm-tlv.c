@@ -168,6 +168,10 @@ static int dlink_odm_tlv_parse_table(struct nvmem_layout *layout)
 	u8 *table, *data;
 	int ret;
 
+	u8 tempData[8];
+	data = tempData;
+	data_len = 8;
+	
 	return dlink_odm_tlv_parse(dev, data, data_len, nvmem);
 	ret = nvmem_device_read(nvmem, 0, sizeof(hdr), &hdr);
 	if (ret < 0)
