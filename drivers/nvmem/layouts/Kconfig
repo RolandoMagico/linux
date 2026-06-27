@@ -48,7 +48,7 @@ config NVMEM_LAYOUT_DLINK_ODM_TLV
 	  If unsure, say N.
 
 config NVMEM_LAYOUT_DLINK_ODM_TLV_KUNIT_TEST
-	tristate "KUnit tests for the D-Link ODM partition TLV layout."
+	bool "KUnit tests for the D-Link ODM partition TLV layout."
 	depends on KUNIT && NVMEM_LAYOUT_DLINK_ODM_TLV
 	default KUNIT_ALL_TESTS
 	help
