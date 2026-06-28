@@ -125,19 +125,97 @@ static u8 r32_data[] = {
 	0x6C, 0x4D, 0x6A, 0x6C, 0x6D, 0x4F, 0x57, 0x56, 0x69, 0x4E, 0x7A, 0x5A, 0x6B, 0x59, 0x6D, 0x55
 };
 
-/* Dummy TLV: type=0x21, len=5, "TEST\0" */
-static u8 sample_tlv[] = {
-    0x21, 0x05, 'T','E','S','T','\0'
-};
-
-static void dlink_tlv_basic_parse_test(struct kunit *test)
+static void dlink_odm_tlv_basic_parse_test_e30(struct kunit *test)
 {
     int ret;
 
     ret = dlink_odm_tlv_parse(NULL,
-                              sample_tlv,
-                              sizeof(sample_tlv),
+                              e30_data,
+                              sizeof(e30_data),
                               NULL);
 
     KUNIT_EXPECT_EQ(test, ret, 0);
 }
+
+static void dlink_odm_tlv_basic_parse_test_m30(struct kunit *test)
+{
+    int ret;
+
+    ret = dlink_odm_tlv_parse(NULL,
+                              m30_data,
+                              sizeof(m30_data),
+                              NULL);
+
+    KUNIT_EXPECT_EQ(test, ret, 0);
+}
+
+static void dlink_odm_tlv_basic_parse_test_m32(struct kunit *test)
+{
+    int ret;
+
+    ret = dlink_odm_tlv_parse(NULL,
+                              m32_data,
+                              sizeof(m32_data),
+                              NULL);
+
+    KUNIT_EXPECT_EQ(test, ret, 0);
+}
+
+static void dlink_odm_tlv_basic_parse_test_m60(struct kunit *test)
+{
+    int ret;
+
+    ret = dlink_odm_tlv_parse(NULL,
+                              m60_data,
+                              sizeof(m60_data),
+                              NULL);
+
+    KUNIT_EXPECT_EQ(test, ret, 0);
+}
+
+static void dlink_odm_tlv_basic_parse_test_m60_2(struct kunit *test)
+{
+    int ret;
+
+    ret = dlink_odm_tlv_parse(NULL,
+                              m60_2_data,
+                              sizeof(m60_2_data),
+                              NULL);
+
+    KUNIT_EXPECT_EQ(test, ret, 0);
+}
+
+static void dlink_odm_tlv_basic_parse_test_r32(struct kunit *test)
+{
+    int ret;
+
+    ret = dlink_odm_tlv_parse(NULL,
+                              r32_data,
+                              sizeof(r32_data),
+                              NULL);
+
+    KUNIT_EXPECT_EQ(test, ret, 0);
+}
+
+
+
+
+static struct kunit_case dlink_odm_tlv_testcases[] = {
+	KUNIT_CASE(dlink_odm_tlv_basic_parse_test_e30),
+	KUNIT_CASE(dlink_odm_tlv_basic_parse_test_m30),
+	KUNIT_CASE(dlink_odm_tlv_basic_parse_test_m32),
+	KUNIT_CASE(dlink_odm_tlv_basic_parse_test_m60),
+	KUNIT_CASE(dlink_odm_tlv_basic_parse_test_m60_2),
+	KUNIT_CASE(dlink_odm_tlv_basic_parse_test_r32),
+	{}
+};
+
+static struct kunit_suite dlink_odm_tlv_test_suite = {
+	.name = "dlink_odm_tlv_test",
+	.test_cases = dlink_odm_tlv_testcases,
+};
+
+kunit_test_suites(&dlink_odm_tlv_test_suite);
+
+MODULE_DESCRIPTION("KUnit tests for the D-Link ODM TLV parser");
+MODULE_LICENSE("GPL");
