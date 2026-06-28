@@ -11,7 +11,6 @@
 #include <linux/nvmem-consumer.h>
 #include <linux/nvmem-provider.h>
 #include <linux/of.h>
-#include <linux/unaligned/le_byteshift.h>
 
 #define DLINK_ODM_TLV_PARTITION_SIZE			(256 * 1024)
 #define DLINK_ODM_TLV_PARTITION_HEADER_LENGTH		(0x20)
@@ -29,6 +28,11 @@
 #define DLINK_ODM_TLF_ENTRY_HEADER_MARKER_BYTE_1	(0x00)
 #define DLINK_ODM_TLF_ENTRY_HEADER_MARKER_BYTE_2	(0x80)
 
+struct dlink_odm_tlv_header {
+	u8 tag;
+	u8 marker;
+	u8 length;
+} __packed;
 
 /* Only the first 256 bytes of the ODM partition are interesting */
 #define DLINK_ODM_TLV_REQUIRED_DATA_SIZE			(256)
@@ -41,26 +45,17 @@ static int dlink_odm_tlv_parse(struct device *dev,
 	size_t offset = DLINK_ODM_TLV_PARTITION_HEADER_LENGTH;
 	while ((offset + DLINK_ODM_TLV_ENTRY_HEADER_FULL_LENGTH) < len)
 	{
-		u8 entryTag, marker0, marker1, marker2, entryLength;
-		etnryTag = data[offset];
-		offset++;
-		marker0 = data[offset];
-		offset++;
-		marker1 = data[offset];
-		offset++;
-		marker2 = data[offset];
-		offset++;
-		entryLength = data[offset];
-		offset++;
-		if ((marker0 == DLINK_ODM_TLF_ENTRY_HEADER_MARKER_BYTE_0) &&
-		    (marker1 == DLINK_ODM_TLF_ENTRY_HEADER_MARKER_BYTE_1) &&
-		    (marker2 == DLINK_ODM_TLF_ENTRY_HEADER_MARKER_BYTE_2))
+		struct dlink_odm_tlv_header* header = (struct dlink_odm_tlv_header*)&(data[offset]);
+		offset += sizeof(struct dlink_odm_tlv_header);
+		if ((header->marker[0] == DLINK_ODM_TLF_ENTRY_HEADER_MARKER_BYTE_0) &&
+		    (header->marker[1] == DLINK_ODM_TLF_ENTRY_HEADER_MARKER_BYTE_1) &&
+		    (header->marker[2] == DLINK_ODM_TLF_ENTRY_HEADER_MARKER_BYTE_2))
 		{
-			pr_info("Found entry with tag %02x and length %02x\n", entryTag, entryLength);
-			if (offset + entryLength < len)
+			pr_info("Found entry with tag %02x and length %02x\n", header->tag, header->length);
+			if (offset + header->length < len)
 			{
 				pr_info("Data:");
-				for (u8 i = 0; i < entryLength; i++)
+				for (u8 i = 0; i < header->length; i++)
 				{
 					pr_info(" %02x", data[offset + i]);
 				}
@@ -72,7 +67,7 @@ static int dlink_odm_tlv_parse(struct device *dev,
 			pr_info("Found entry with tag %02x and length %02x, but invalid marker\n", entryTag, entryLength);
 		}
 
-		offset += entryLength;
+		offset += header->length;
 	}
 	
 	return 0;
