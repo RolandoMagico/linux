@@ -11,12 +11,24 @@
 #include <linux/nvmem-consumer.h>
 #include <linux/nvmem-provider.h>
 #include <linux/of.h>
+#include <linux/unaligned/le_byteshift.h>
 
 #define DLINK_ODM_TLV_PARTITION_SIZE			(256 * 1024)
+#define DLINK_ODM_TLV_PARTITION_HEADER_LENGTH		(0x20)
 #define DLINK_ODM_TLV_PARTITION_HEADER_BYTE_0		(0x02)
 #define DLINK_ODM_TLV_PARTITION_HEADER_BYTE_1		(0x02)
 #define DLINK_ODM_TLV_PARTITION_HEADER_BYTE_2		(0x24)
 #define DLINK_ODM_TLV_PARTITION_HEADER_BYTE_3		(0x2b)
+
+#define DLINK_ODM_TLV_ENTRY_HEADER_TAG_LEGNTH		(0x01)
+#define DLINK_ODM_TLF_ENTRY_HEADER_MARKER_LENGTH	(0x03)
+#define DLINK_ODM_TLF_ENTRY_HEADER_SIZE_LENGTH		(0x01)
+#define DLINK_ODM_TLV_ENTRY_HEADER_FULL_LENGTH		(0x05)
+
+#define DLINK_ODM_TLF_ENTRY_HEADER_MARKER_BYTE_0	(0x42)
+#define DLINK_ODM_TLF_ENTRY_HEADER_MARKER_BYTE_1	(0x00)
+#define DLINK_ODM_TLF_ENTRY_HEADER_MARKER_BYTE_2	(0x80)
+
 
 /* Only the first 256 bytes of the ODM partition are interesting */
 #define DLINK_ODM_TLV_REQUIRED_DATA_SIZE			(256)
@@ -26,6 +38,43 @@ static int dlink_odm_tlv_parse(struct device *dev,
                         size_t len,
                         struct nvmem_device *nvmem)
 {
+	size_t offset = DLINK_ODM_TLV_PARTITION_HEADER_LENGTH;
+	while ((offset + DLINK_ODM_TLV_ENTRY_HEADER_FULL_LENGTH) < len)
+	{
+		u8 entryTag, marker0, marker1, marker2, entryLength;
+		etnryTag = data[offset];
+		offset++;
+		marker0 = data[offset];
+		offset++;
+		marker1 = data[offset];
+		offset++;
+		marker2 = data[offset];
+		offset++;
+		entryLength = data[offset];
+		offset++;
+		if ((marker0 == DLINK_ODM_TLF_ENTRY_HEADER_MARKER_BYTE_0) &&
+		    (marker1 == DLINK_ODM_TLF_ENTRY_HEADER_MARKER_BYTE_1) &&
+		    (marker2 == DLINK_ODM_TLF_ENTRY_HEADER_MARKER_BYTE_2))
+		{
+			pr_info("Found entry with tag %02x and length %02x\n", entryTag, entryLength);
+			if (offset + entryLength < len)
+			{
+				pr_info("Data:");
+				for (u8 i = 0; i < entryLength; i++)
+				{
+					pr_info(" %02x", data[offset + i]);
+				}
+				pr_info("\n");
+			}
+		}
+		else
+		{
+			pr_info("Found entry with tag %02x and length %02x, but invalid marker\n", entryTag, entryLength);
+		}
+
+		offset += entryLength;
+	}
+	
 	return 0;
 }
 
@@ -153,12 +202,7 @@ static int dlink_odm_tlv_add_cells(struct nvmem_layout *layout)
 	u8* data;
 	int result = 0;
 	struct device *dev = &(layout->dev);
-	if (layout->nvmem->size != DLINK_ODM_TLV_PARTITION_SIZE)
-	{
-		dev_err(dev, "Invalid partition size %zu byes\n", layout->nvmem->size);
-		result = -EINVAL;
-	}
-	else if ((data = devm_kmalloc(dev, DLINK_ODM_TLV_REQUIRED_DATA_SIZE, GFP_KERNEL)) == NULL)
+	if ((data = devm_kmalloc(dev, DLINK_ODM_TLV_REQUIRED_DATA_SIZE, GFP_KERNEL)) == NULL)
 	{
 		dev_err(dev, "Unable to allocate read buffer\n");
 		result = -ENOMEM;
