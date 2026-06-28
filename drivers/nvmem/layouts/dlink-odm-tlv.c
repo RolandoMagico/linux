@@ -24,18 +24,57 @@
 #define DLINK_ODM_TLF_ENTRY_HEADER_SIZE_LENGTH		(0x01)
 #define DLINK_ODM_TLV_ENTRY_HEADER_FULL_LENGTH		(0x05)
 
-#define DLINK_ODM_TLF_ENTRY_HEADER_MARKER_BYTE_0	(0x42)
-#define DLINK_ODM_TLF_ENTRY_HEADER_MARKER_BYTE_1	(0x00)
-#define DLINK_ODM_TLF_ENTRY_HEADER_MARKER_BYTE_2	(0x80)
+#define DLINK_ODM_TLV_ENTRY_HEADER_MARKER_BYTE_0	(0x42)
+#define DLINK_ODM_TLV_ENTRY_HEADER_MARKER_BYTE_1	(0x00)
+#define DLINK_ODM_TLV_ENTRY_HEADER_MARKER_BYTE_2	(0x80)
+
+#define DLINK_ODM_TLV_TAG_FIRMWARE_ID				(0x10)
+#define DLINK_ODM_TLV_TAG_HARDWARE_REVISION			(0x14)
+#define DLINK_ODM_TLV_TAG_MANUFACTURING_DATE		(0x18)
+#define DLINK_ODM_TLV_TAG_DEVICE_NAME				(0x20)
+#define DLINK_ODM_TLF_TAG_DEVICE_IP_ADDRESS			(0x22)
+#define DLINK_ODM_TLV_TAG_DEVICE_VARIANT			(0x27)
+#define DLINK_ODM_TLF_TAG_DEVICE_MAC_ADDRESS		(0x30)
 
 struct dlink_odm_tlv_header {
 	u8 tag;
 	u8 marker[3];
-	u8 length;
+	__le16 length;
 } __packed;
 
 /* Only the first 256 bytes of the ODM partition are interesting */
 #define DLINK_ODM_TLV_REQUIRED_DATA_SIZE			(256)
+
+static void dlink_odm_tlf_print_entry(const struct dlink_odm_tlv_header* header, const u8* data, const size_t offset)
+{
+	switch (header->tag)
+	{
+		case DLINK_ODM_TLV_TAG_FIRMWARE_ID:
+			pr_info("Firmware ID: %s\n", data);
+			break;
+		case DLINK_ODM_TLV_TAG_HARDWARE_REVISION:
+			pr_info("Hardware Revision: %s\n", data);
+			break;
+		case DLINK_ODM_TLV_TAG_MANUFACTURING_DATE:
+			pr_info("Manufacturing Date: %s\n", data);
+			break;
+		case DLINK_ODM_TLV_TAG_DEVICE_NAME:
+			pr_info("Device Name: %s\n", data);
+			break;
+		case DLINK_ODM_TLV_TAG_DEVICE_VARIANT:
+			pr_info("Device Variant: %s\n", data);
+			break;
+		case DLINK_ODM_TLF_TAG_DEVICE_IP_ADDRESS:
+			pr_info("Device IP Address: %i.%i.%i.%i\n", data[0], data[1], data[2], data[3]);
+			break;
+		case DLINK_ODM_TLF_TAG_DEVICE_MAC_ADDRESS:
+			pr_info("Device IP Address: %02x:%02x:%02x:%02x:%02x:%02x\n", data[0], data[1], data[2], data[3], data[4], data[5]);
+			break;
+		default:
+			pr_info("Unkown Entry tag 0x%02x and length 0x%04x at offset %08zx\n", header->tag, header->length, offset);
+			break;
+	}
+}
 
 static int dlink_odm_tlv_parse(struct device *dev,
                         u8 *data,
@@ -47,24 +86,10 @@ static int dlink_odm_tlv_parse(struct device *dev,
 	{
 		struct dlink_odm_tlv_header* header = (struct dlink_odm_tlv_header*)&(data[offset]);
 		offset += sizeof(struct dlink_odm_tlv_header);
-		if ((header->marker[0] == DLINK_ODM_TLF_ENTRY_HEADER_MARKER_BYTE_0) &&
-		    (header->marker[1] == DLINK_ODM_TLF_ENTRY_HEADER_MARKER_BYTE_1) &&
-		    (header->marker[2] == DLINK_ODM_TLF_ENTRY_HEADER_MARKER_BYTE_2))
+		
+		if (offset + header->length < len)
 		{
-			pr_info("Found entry with tag %02x and length %02x\n", header->tag, header->length);
-			if (offset + header->length < len)
-			{
-				pr_info("Data:");
-				for (u8 i = 0; i < header->length; i++)
-				{
-					pr_info(" %02x", data[offset + i]);
-				}
-				pr_info("\n");
-			}
-		}
-		else
-		{
-			pr_info("Found entry with tag %02x and length %02x, but invalid marker\n", header->tag, header->length);
+			dlink_odm_tlf_print_entry(header, &(data[offset]), offset);
 		}
 
 		offset += header->length;
@@ -218,38 +243,6 @@ static int dlink_odm_tlv_add_cells(struct nvmem_layout *layout)
 	}
 
 	return result;
-/*
-	u8 tempData[8];
-	data = tempData;
-	data_len = 8;
-	
-	return dlink_odm_tlv_parse(dev, data, data_len, nvmem);
-	ret = nvmem_device_read(nvmem, 0, sizeof(hdr), &hdr);
-	if (ret < 0)
-		return ret;
-
-	hdr_len = sizeof(hdr.id) + sizeof(hdr.version) + sizeof(hdr.data_len);
-	data_len = be16_to_cpu(hdr.data_len);
-	table_len = hdr_len + data_len;
-	if (table_len > ONIE_TLV_MAX_LEN) {
-		dev_err(dev, "Invalid ONIE TLV data length\n");
-		return -EINVAL;
-	}
-
-	table = devm_kmalloc(dev, table_len, GFP_KERNEL);
-	if (!table)
-		return -ENOMEM;
-
-	ret = nvmem_device_read(nvmem, 0, table_len, table);
-	if (ret != table_len)
-		return ret;
-
-	if (!dlink_odm_tlv_crc_is_valid(dev, table_len, table))
-		return -EINVAL;
-
-	data = table + hdr_len;
-	ret = dlink_odm_tlv_add_cells(dev, nvmem, data_len, data);
-*/
 }
 
 static int dlink_odm_tlv_probe(struct nvmem_layout *layout)
@@ -465,9 +458,6 @@ static void dlink_odm_tlv_basic_parse_test_r32(struct kunit *test)
 
     KUNIT_EXPECT_EQ(test, ret, 0);
 }
-
-
-
 
 static struct kunit_case dlink_odm_tlv_testcases[] = {
 	KUNIT_CASE(dlink_odm_tlv_basic_parse_test_e30),
