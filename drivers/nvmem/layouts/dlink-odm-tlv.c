@@ -30,7 +30,7 @@
 
 struct dlink_odm_tlv_header {
 	u8 tag;
-	u8 marker;
+	u8 marker[3];
 	u8 length;
 } __packed;
 
@@ -64,7 +64,7 @@ static int dlink_odm_tlv_parse(struct device *dev,
 		}
 		else
 		{
-			pr_info("Found entry with tag %02x and length %02x, but invalid marker\n", entryTag, entryLength);
+			pr_info("Found entry with tag %02x and length %02x, but invalid marker\n", header->tag, header->length);
 		}
 
 		offset += header->length;
