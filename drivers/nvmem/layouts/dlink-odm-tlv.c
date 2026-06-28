@@ -20,6 +20,15 @@
 #define ONIE_TLV_CRC_SZ 4
 #define ONIE_TLV_HDR_ID	"TlvInfo"
 
+#define DLINK_ODM_TLV_PARTITION_SIZE			(256 * 1024)
+#define DLINK_ODM_TLV_PARTITION_HEADER_BYTE_0		(0x02)
+#define DLINK_ODM_TLV_PARTITION_HEADER_BYTE_1		(0x02)
+#define DLINK_ODM_TLV_PARTITION_HEADER_BYTE_2		(0x24)
+#define DLINK_ODM_TLV_PARTITION_HEADER_BYTE_3		(0x2b)
+
+/* Only the first 256 bytes of the ODM partition are interesting */
+#define DLINK_ODM_TLV_REQUIRED_DATA_SIZE			(256)
+
 struct dlink_odm_tlv_hdr {
 	u8 id[8];
 	u8 version;
@@ -150,9 +159,12 @@ next:
 	return 0;
 }
 
-static bool dlink_odm_tlv_hdr_is_valid(struct device *dev, struct dlink_odm_tlv_hdr *hdr)
+static bool dlink_odm_tlv_hdr_is_valid(const u8* data)
 {
-	return true;
+	return ((data[0] == DLINK_ODM_TLV_PARTITION_HEADER_BYTE_0) &&
+		(data[1] == DLINK_ODM_TLV_PARTITION_HEADER_BYTE_1) &&
+		(data[2] == DLINK_ODM_TLV_PARTITION_HEADER_BYTE_2) &&
+		(data[3] == DLINK_ODM_TLV_PARTITION_HEADER_BYTE_3))
 }
 
 static bool dlink_odm_tlv_crc_is_valid(struct device *dev, size_t table_len, u8 *table)
@@ -160,15 +172,38 @@ static bool dlink_odm_tlv_crc_is_valid(struct device *dev, size_t table_len, u8 
 	return true;
 }
 
-static int dlink_odm_tlv_parse_table(struct nvmem_layout *layout)
+static int dlink_odm_tlv_add_cells(struct nvmem_layout *layout)
 {
-	struct nvmem_device *nvmem = layout->nvmem;
-	struct device *dev = &layout->dev;
-	struct dlink_odm_tlv_hdr hdr;
-	size_t table_len, data_len, hdr_len;
-	u8 *table, *data;
-	int ret;
+	u8* data;
+	int result = 0;
+	struct device *dev = &(layout->dev);
+	if (layout->nvmem->size != DLINK_ODM_TLV_DEFAULT_PARTITION_SIZE)
+	{
+		dev_err(dev, "Invalid partition size %zu byes\n", layout->nvmem->size);
+		result = EINVAL;
+	}
+	else if ((data = devm_kmalloc(dev, DLINK_ODM_TLV_REQUIRED_DATA_SIZE, GFP_KERNEL) == 0)
+	{
+		dev_err(dev, "Unable to allocate read buffer\n");
+		result = ENOMEM;
+	}
+	else if (nvmem_device_read(layout->nvmem, 0, DLINK_ODM_TLV_REQUIRED_DATA_SIZE, data) != DLINK_ODM_TLV_REQUIRED_DATA_SIZE)
+	{
+		dev_err(dev, "Unable to read data from device\n");
+		result = EIO;
+	}
+	else if (dlink_odm_tlv_hdr_is_valid(data) == false)
+	{
+		dev_err(dev, "Invalid ODM partition header %02X %02X %02X %02X\n", data[0], data[1], data[2], data[3]);
+		result = EINVAL;
+	}
+	else
+	{
+		result = dlink_odm_tlv_parse(dev, data, DLINK_ODM_TLV_REQUIRED_DATA_SIZE, layout->nvmem);
+	}
 
+	return result;
+/*
 	u8 tempData[8];
 	data = tempData;
 	data_len = 8;
@@ -177,11 +212,6 @@ static int dlink_odm_tlv_parse_table(struct nvmem_layout *layout)
 	ret = nvmem_device_read(nvmem, 0, sizeof(hdr), &hdr);
 	if (ret < 0)
 		return ret;
-
-	if (!dlink_odm_tlv_hdr_is_valid(dev, &hdr)) {
-		dev_err(dev, "Invalid D-Link ODM TLV header\n");
-		return -EINVAL;
-	}
 
 	hdr_len = sizeof(hdr.id) + sizeof(hdr.version) + sizeof(hdr.data_len);
 	data_len = be16_to_cpu(hdr.data_len);
@@ -204,16 +234,12 @@ static int dlink_odm_tlv_parse_table(struct nvmem_layout *layout)
 
 	data = table + hdr_len;
 	ret = dlink_odm_tlv_add_cells(dev, nvmem, data_len, data);
-	if (ret)
-		return ret;
-
-	return 0;
+*/
 }
 
 static int dlink_odm_tlv_probe(struct nvmem_layout *layout)
 {
-	layout->add_cells = dlink_odm_tlv_parse_table;
-
+	layout->add_cells = dlink_odm_tlv_add_cells;
 	return nvmem_layout_register(layout);
 }
 
