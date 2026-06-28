@@ -1,24 +1,16 @@
 // SPDX-License-Identifier: GPL-2.0-only
 /*
- * ONIE tlv NVMEM cells provider
+ * D-Link ODM TLV NVMEM cells provider
  *
- * Copyright (C) 2022 Open Compute Group ONIE
- * Author: Miquel Raynal <miquel.raynal@bootlin.com>
- * Based on the nvmem driver written by: Vadym Kochan <vadym.kochan@plvision.eu>
- * Inspired by the first layout written by: Rafał Miłecki <rafal@milecki.pl>
+ * Copyright (C) 2026 Roland Reinl
+ * Author: Roland Reinl <reinlroland+github@gmail.com>
  */
 
 #include <kunit/test.h>
-#include <linux/crc32.h>
 #include <linux/etherdevice.h>
 #include <linux/nvmem-consumer.h>
 #include <linux/nvmem-provider.h>
 #include <linux/of.h>
-
-#define ONIE_TLV_MAX_LEN 2048
-#define ONIE_TLV_CRC_FIELD_SZ 6
-#define ONIE_TLV_CRC_SZ 4
-#define ONIE_TLV_HDR_ID	"TlvInfo"
 
 #define DLINK_ODM_TLV_PARTITION_SIZE			(256 * 1024)
 #define DLINK_ODM_TLV_PARTITION_HEADER_BYTE_0		(0x02)
@@ -28,17 +20,6 @@
 
 /* Only the first 256 bytes of the ODM partition are interesting */
 #define DLINK_ODM_TLV_REQUIRED_DATA_SIZE			(256)
-
-struct dlink_odm_tlv_hdr {
-	u8 id[8];
-	u8 version;
-	__be16 data_len;
-} __packed;
-
-struct dlink_odm_tlv {
-	u8 type;
-	u8 len;
-} __packed;
 
 static int dlink_odm_tlv_parse(struct device *dev,
                         u8 *data,
@@ -112,7 +93,7 @@ static nvmem_cell_post_process_t dlink_odm_tlv_read_cb(u8 type, u8 *buf)
 
 	return NULL;
 }
-
+/*
 static int dlink_odm_tlv_add_cells(struct device *dev, struct nvmem_device *nvmem,
 			      size_t data_len, u8 *data)
 {
@@ -158,18 +139,13 @@ next:
 
 	return 0;
 }
-
+*/
 static bool dlink_odm_tlv_hdr_is_valid(const u8* data)
 {
 	return ((data[0] == DLINK_ODM_TLV_PARTITION_HEADER_BYTE_0) &&
 		(data[1] == DLINK_ODM_TLV_PARTITION_HEADER_BYTE_1) &&
 		(data[2] == DLINK_ODM_TLV_PARTITION_HEADER_BYTE_2) &&
-		(data[3] == DLINK_ODM_TLV_PARTITION_HEADER_BYTE_3))
-}
-
-static bool dlink_odm_tlv_crc_is_valid(struct device *dev, size_t table_len, u8 *table)
-{
-	return true;
+		(data[3] == DLINK_ODM_TLV_PARTITION_HEADER_BYTE_3));
 }
 
 static int dlink_odm_tlv_add_cells(struct nvmem_layout *layout)
@@ -177,25 +153,25 @@ static int dlink_odm_tlv_add_cells(struct nvmem_layout *layout)
 	u8* data;
 	int result = 0;
 	struct device *dev = &(layout->dev);
-	if (layout->nvmem->size != DLINK_ODM_TLV_DEFAULT_PARTITION_SIZE)
+	if (layout->nvmem->size != DLINK_ODM_TLV_PARTITION_SIZE)
 	{
 		dev_err(dev, "Invalid partition size %zu byes\n", layout->nvmem->size);
-		result = EINVAL;
+		result = -EINVAL;
 	}
-	else if ((data = devm_kmalloc(dev, DLINK_ODM_TLV_REQUIRED_DATA_SIZE, GFP_KERNEL) == 0)
+	else if ((data = devm_kmalloc(dev, DLINK_ODM_TLV_REQUIRED_DATA_SIZE, GFP_KERNEL)) == NULL)
 	{
 		dev_err(dev, "Unable to allocate read buffer\n");
-		result = ENOMEM;
+		result = -ENOMEM;
 	}
 	else if (nvmem_device_read(layout->nvmem, 0, DLINK_ODM_TLV_REQUIRED_DATA_SIZE, data) != DLINK_ODM_TLV_REQUIRED_DATA_SIZE)
 	{
 		dev_err(dev, "Unable to read data from device\n");
-		result = EIO;
+		result = -EIO;
 	}
 	else if (dlink_odm_tlv_hdr_is_valid(data) == false)
 	{
 		dev_err(dev, "Invalid ODM partition header %02X %02X %02X %02X\n", data[0], data[1], data[2], data[3]);
-		result = EINVAL;
+		result = -EINVAL;
 	}
 	else
 	{
