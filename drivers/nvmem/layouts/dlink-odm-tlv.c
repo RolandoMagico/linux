@@ -45,37 +45,6 @@ struct dlink_odm_tlv_header {
 /* Only the first 256 bytes of the ODM partition are interesting */
 #define DLINK_ODM_TLV_REQUIRED_DATA_SIZE			(256)
 
-static void dlink_odm_tlf_print_entry(const struct dlink_odm_tlv_header* header, const u8* data, const size_t offset)
-{
-	switch (header->tag)
-	{
-		case DLINK_ODM_TLV_TAG_FIRMWARE_ID:
-			pr_info("Firmware ID: %s\n", data);
-			break;
-		case DLINK_ODM_TLV_TAG_HARDWARE_REVISION:
-			pr_info("Hardware Revision: %s\n", data);
-			break;
-		case DLINK_ODM_TLV_TAG_MANUFACTURING_DATE:
-			pr_info("Manufacturing Date: %s\n", data);
-			break;
-		case DLINK_ODM_TLV_TAG_DEVICE_NAME:
-			pr_info("Device Name: %s\n", data);
-			break;
-		case DLINK_ODM_TLV_TAG_DEVICE_VARIANT:
-			pr_info("Device Variant: %s\n", data);
-			break;
-		case DLINK_ODM_TLF_TAG_DEVICE_IP_ADDRESS:
-			pr_info("Device IP Address: %i.%i.%i.%i\n", data[0], data[1], data[2], data[3]);
-			break;
-		case DLINK_ODM_TLF_TAG_DEVICE_MAC_ADDRESS:
-			pr_info("Device IP Address: %02x:%02x:%02x:%02x:%02x:%02x\n", data[0], data[1], data[2], data[3], data[4], data[5]);
-			break;
-		default:
-			pr_info("Unkown Entry tag 0x%02x and length 0x%04x at offset %08zx\n", header->tag, header->length, offset);
-			break;
-	}
-}
-
 static int dlink_odm_tlv_parse(const u8 *data, size_t len)
 {
 	size_t offset = DLINK_ODM_TLV_PARTITION_HEADER_LENGTH;
@@ -86,7 +55,7 @@ static int dlink_odm_tlv_parse(const u8 *data, size_t len)
 		
 		if (offset + header->length < len)
 		{
-			dlink_odm_tlf_print_entry(header, &(data[offset]), offset);
+			// dlink_odm_tlf_print_entry(header, &(data[offset]), offset);
 		}
 
 		offset += header->length;
@@ -412,11 +381,49 @@ static u8 r32_data[] = {
 	0x6C, 0x4D, 0x6A, 0x6C, 0x6D, 0x4F, 0x57, 0x56, 0x69, 0x4E, 0x7A, 0x5A, 0x6B, 0x59, 0x6D, 0x55
 };
 
+
+static void dlink_odm_tlf_print_entry(const u8 entry, const u8* data)
+{
+	switch (header->tag)
+	{
+		case DLINK_ODM_TLV_TAG_FIRMWARE_ID:
+			kunit_info("Firmware ID: %s\n", data);
+			break;
+		case DLINK_ODM_TLV_TAG_HARDWARE_REVISION:
+			kunit_info("Hardware Revision: %s\n", data);
+			break;
+		case DLINK_ODM_TLV_TAG_MANUFACTURING_DATE:
+			kunit_info("Manufacturing Date: %s\n", data);
+			break;
+		case DLINK_ODM_TLV_TAG_DEVICE_NAME:
+			kunit_info("Device Name: %s\n", data);
+			break;
+		case DLINK_ODM_TLV_TAG_DEVICE_VARIANT:
+			kunit_info("Device Variant: %s\n", data);
+			break;
+		case DLINK_ODM_TLF_TAG_DEVICE_IP_ADDRESS:
+			kunit_info("Device IP Address: %i.%i.%i.%i\n", data[0], data[1], data[2], data[3]);
+			break;
+		case DLINK_ODM_TLF_TAG_DEVICE_MAC_ADDRESS:
+			kunit_info("Device IP Address: %02x:%02x:%02x:%02x:%02x:%02x\n", data[0], data[1], data[2], data[3], data[4], data[5]);
+			break;
+		default:
+			kunit_info("Unkown Entry tag 0x%02x and length 0x%04x\n", header->tag, header->length,);
+			break;
+	}
+}
+
 static void dlink_odm_tlv_basic_parse_test_e30(struct kunit *test)
 {
     int ret;
+	u8 mac[6];
+	u8 entry = DLINK_ODM_TLF_TAG_DEVICE_MAC_ADDRESS;
 
-    ret = dlink_odm_tlv_parse(e30_data, sizeof(e30_data));
+	ret = dlink_odm_tlv_get_entry(e30_data, sizeof(e30_data), entry, mac, sizeof(mac));
+	if (ret == 0)
+	{
+		dlink_odm_tlf_print_entry(enry, mac);
+	}
 
     KUNIT_EXPECT_EQ(test, ret, 0);
 }
