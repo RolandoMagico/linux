@@ -384,7 +384,7 @@ static u8 r32_data[] = {
 
 static void dlink_odm_tlf_print_entry(const u8 entry, const u8* data)
 {
-	switch (header->tag)
+	switch (entry)
 	{
 		case DLINK_ODM_TLV_TAG_FIRMWARE_ID:
 			kunit_info("Firmware ID: %s\n", data);
@@ -408,7 +408,7 @@ static void dlink_odm_tlf_print_entry(const u8 entry, const u8* data)
 			kunit_info("Device IP Address: %02x:%02x:%02x:%02x:%02x:%02x\n", data[0], data[1], data[2], data[3], data[4], data[5]);
 			break;
 		default:
-			kunit_info("Unkown Entry tag 0x%02x and length 0x%04x\n", header->tag, header->length,);
+			kunit_info("Unkown Entry tag 0x%02x\n", entry);
 			break;
 	}
 }
@@ -422,7 +422,7 @@ static void dlink_odm_tlv_basic_parse_test_e30(struct kunit *test)
 	ret = dlink_odm_tlv_get_entry(e30_data, sizeof(e30_data), entry, mac, sizeof(mac));
 	if (ret == 0)
 	{
-		dlink_odm_tlf_print_entry(enry, mac);
+		dlink_odm_tlf_print_entry(entry, mac);
 	}
 
     KUNIT_EXPECT_EQ(test, ret, 0);
