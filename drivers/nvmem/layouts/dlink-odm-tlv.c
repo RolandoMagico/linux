@@ -76,10 +76,7 @@ static void dlink_odm_tlf_print_entry(const struct dlink_odm_tlv_header* header,
 	}
 }
 
-static int dlink_odm_tlv_parse(struct device *dev,
-                        u8 *data,
-                        size_t len,
-                        struct nvmem_device *nvmem)
+static int dlink_odm_tlv_parse(const u8 *data, size_t len)
 {
 	size_t offset = DLINK_ODM_TLV_PARTITION_HEADER_LENGTH;
 	while ((offset + DLINK_ODM_TLV_ENTRY_HEADER_FULL_LENGTH) < len)
@@ -96,6 +93,34 @@ static int dlink_odm_tlv_parse(struct device *dev,
 	}
 	
 	return 0;
+}
+
+static int dlink_odm_tlv_get_entry(const u8 *data, size_t len, u8 entry, u8* buffer, size_t bufferLen)
+{
+	int result = EINVAL;
+	size_t offset = DLINK_ODM_TLV_PARTITION_HEADER_LENGTH;
+	while ((offset + DLINK_ODM_TLV_ENTRY_HEADER_FULL_LENGTH) < len)
+	{
+		struct dlink_odm_tlv_header* header = (struct dlink_odm_tlv_header*)&(data[offset]);
+		offset += sizeof(struct dlink_odm_tlv_header);
+		
+		if (offset + header->length < len)
+		{
+			if (header->tag == entry)
+			{
+				if (header->length <= bufferLen)
+				{
+					memcpy(buffer, &(data[offset]), header->length);
+					result = 0;
+					break;
+				}
+			}
+		}
+
+		offset += header->length;
+	}
+	
+	return result;
 }
 
 static const char *dlink_odm_tlv_cell_name(u8 type)
@@ -239,7 +264,7 @@ static int dlink_odm_tlv_add_cells(struct nvmem_layout *layout)
 	}
 	else
 	{
-		result = dlink_odm_tlv_parse(dev, data, DLINK_ODM_TLV_REQUIRED_DATA_SIZE, layout->nvmem);
+		result = dlink_odm_tlv_parse(data, DLINK_ODM_TLV_REQUIRED_DATA_SIZE);
 	}
 
 	return result;
@@ -391,10 +416,7 @@ static void dlink_odm_tlv_basic_parse_test_e30(struct kunit *test)
 {
     int ret;
 
-    ret = dlink_odm_tlv_parse(NULL,
-                              e30_data,
-                              sizeof(e30_data),
-                              NULL);
+    ret = dlink_odm_tlv_parse(e30_data, sizeof(e30_data));
 
     KUNIT_EXPECT_EQ(test, ret, 0);
 }
@@ -403,10 +425,7 @@ static void dlink_odm_tlv_basic_parse_test_m30(struct kunit *test)
 {
     int ret;
 
-    ret = dlink_odm_tlv_parse(NULL,
-                              m30_data,
-                              sizeof(m30_data),
-                              NULL);
+    ret = dlink_odm_tlv_parse(m30_data, sizeof(m30_data));
 
     KUNIT_EXPECT_EQ(test, ret, 0);
 }
@@ -415,10 +434,7 @@ static void dlink_odm_tlv_basic_parse_test_m32(struct kunit *test)
 {
     int ret;
 
-    ret = dlink_odm_tlv_parse(NULL,
-                              m32_data,
-                              sizeof(m32_data),
-                              NULL);
+	ret = dlink_odm_tlv_parse(m32_data, sizeof(m32_data));
 
     KUNIT_EXPECT_EQ(test, ret, 0);
 }
@@ -427,10 +443,7 @@ static void dlink_odm_tlv_basic_parse_test_m60(struct kunit *test)
 {
     int ret;
 
-    ret = dlink_odm_tlv_parse(NULL,
-                              m60_data,
-                              sizeof(m60_data),
-                              NULL);
+	ret = dlink_odm_tlv_parse(m60_data, sizeof(m60_data));
 
     KUNIT_EXPECT_EQ(test, ret, 0);
 }
@@ -439,10 +452,7 @@ static void dlink_odm_tlv_basic_parse_test_m60_2(struct kunit *test)
 {
     int ret;
 
-    ret = dlink_odm_tlv_parse(NULL,
-                              m60_2_data,
-                              sizeof(m60_2_data),
-                              NULL);
+	ret = dlink_odm_tlv_parse(m60_2_data, sizeof(m60_2_data));
 
     KUNIT_EXPECT_EQ(test, ret, 0);
 }
@@ -451,10 +461,7 @@ static void dlink_odm_tlv_basic_parse_test_r32(struct kunit *test)
 {
     int ret;
 
-    ret = dlink_odm_tlv_parse(NULL,
-                              r32_data,
-                              sizeof(r32_data),
-                              NULL);
+	ret = dlink_odm_tlv_parse(r32_data, sizeof(r32_data));
 
     KUNIT_EXPECT_EQ(test, ret, 0);
 }
