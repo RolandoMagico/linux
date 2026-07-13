@@ -39,7 +39,7 @@ struct dlink_odm_tlv_header {
 /* Only the first 256 bytes of the ODM partition are interesting */
 #define DLINK_ODM_TLV_REQUIRED_DATA_SIZE			(256)
 
-static bool dlink_odm_tlv_hdr_is_valid(const u8* data)
+static bool dlink_odm_tlv_hdr_is_valid(const u8 *data)
 {
 	return ((data[0] == DLINK_ODM_TLV_PARTITION_HEADER_BYTE_0) &&
 			(data[1] == DLINK_ODM_TLV_PARTITION_HEADER_BYTE_1) &&
@@ -47,8 +47,7 @@ static bool dlink_odm_tlv_hdr_is_valid(const u8* data)
 			(data[3] == DLINK_ODM_TLV_PARTITION_HEADER_BYTE_3));
 }
 
-static int dlink_odm_tlv_find_entry(
-	const u8 *data,
+static int dlink_odm_tlv_find_entry(const u8 *data,
 	size_t len,
 	u8 entry,
 	size_t *entryOffset,
@@ -61,27 +60,23 @@ static int dlink_odm_tlv_find_entry(
 
 	size_t offset = DLINK_ODM_TLV_PARTITION_HEADER_LENGTH;
 
-	if (!dlink_odm_tlv_hdr_is_valid(data))
-	{
+	if (!dlink_odm_tlv_hdr_is_valid(data)) {
 		result = -EINVAL;
 	} else {
-		while ((offset + sizeof(struct dlink_odm_tlv_header)) <= len)
-		{
+		while ((offset + sizeof(struct dlink_odm_tlv_header)) <= len) {
 			struct dlink_odm_tlv_header header;
+
 			memcpy(&header, data + offset, sizeof(header));
 
 			size_t tempEntryLength = le16_to_cpu(header.length);
+
 			if (!tempEntryLength)
-			{
 				return -EINVAL;
-			}
 
 			offset += sizeof(struct dlink_odm_tlv_header);
-			
-			if (offset + tempEntryLength <= len)
-			{
-				if (header.tag == entry)
-				{
+
+			if (offset + tempEntryLength <= len) {
+				if (header.tag == entry) {
 					*entryOffset = offset;
 					*entryLength = tempEntryLength;
 					return 0;
@@ -91,23 +86,21 @@ static int dlink_odm_tlv_find_entry(
 			offset += tempEntryLength;
 		}
 	}
-	
+
 	return result;
 }
 
-static int dlink_odm_tlv_get_entry(
-	const u8 *data,
+static int dlink_odm_tlv_get_entry(const u8 *data,
 	size_t len,
 	u8 entry,
-	u8* buffer,
+	u8 *buffer,
 	size_t bufferLen)
 {
 	int result = -EINVAL;
 	size_t offset, length;
-	if (dlink_odm_tlv_find_entry(data, len, entry, &offset, &length) == 0)
-	{
-		if (length <= bufferLen)
-		{
+
+	if (dlink_odm_tlv_find_entry(data, len, entry, &offset, &length) == 0) {
+		if (length <= bufferLen) {
 			memcpy(buffer, &(data[offset]), length);
 			result = 0;
 		}
@@ -118,37 +111,37 @@ static int dlink_odm_tlv_get_entry(
 
 static int dlink_odm_tlv_add_cells(struct nvmem_layout *layout)
 {
-	u8* data;
+	u8 *data;
 	int result = 0;
 	size_t offset, length;
 	struct device *dev = &(layout->dev);
-	if ((data = devm_kmalloc(dev, DLINK_ODM_TLV_REQUIRED_DATA_SIZE, GFP_KERNEL)) == NULL)
-	{
+
+	data = devm_kmalloc(dev, DLINK_ODM_TLV_REQUIRED_DATA_SIZE, GFP_KERNEL);
+	if (data == NULL) {
 		dev_err(dev, "Unable to allocate read buffer\n");
 		result = -ENOMEM;
-	}
-	else if (nvmem_device_read(layout->nvmem, 0, DLINK_ODM_TLV_REQUIRED_DATA_SIZE, data) != DLINK_ODM_TLV_REQUIRED_DATA_SIZE)
-	{
+	} else if (nvmem_device_read(layout->nvmem,
+					0,
+					DLINK_ODM_TLV_REQUIRED_DATA_SIZE,
+					data) != DLINK_ODM_TLV_REQUIRED_DATA_SIZE) {
 		dev_err(dev, "Unable to read data from device\n");
 		result = -EIO;
-	}
-	else if (!dlink_odm_tlv_hdr_is_valid(data))
-	{
-		dev_err(dev, "Invalid ODM partition header %02X %02X %02X %02X\n", data[0], data[1], data[2], data[3]);
+	} else if (!dlink_odm_tlv_hdr_is_valid(data)) {
+		dev_err(dev, "Invalid ODM partition header %4ph\n", data);
 		result = -EINVAL;
-	}
-	else if (dlink_odm_tlv_find_entry(data, DLINK_ODM_TLV_REQUIRED_DATA_SIZE, DLINK_ODM_TLV_TAG_DEVICE_MAC_ADDRESS, &offset, &length) != 0)
-	{
+	} else if (dlink_odm_tlv_find_entry(data,
+					DLINK_ODM_TLV_REQUIRED_DATA_SIZE,
+					DLINK_ODM_TLV_TAG_DEVICE_MAC_ADDRESS,
+					&offset,
+					&length) != 0) {
 		dev_err(dev, "Unable to find MAC address\n");
 		result = -ENXIO;
-	}
-	else if (length != ETH_ALEN)
-	{
+	} else if (length != ETH_ALEN) {
 		dev_err(dev, "Invalid MAC address length: %zu\n", length);
 		result = -EINVAL;
-	}
-	else {
+	} else {
 		struct nvmem_cell_info cell = {};
+
 		cell.name = "mac-address";
 		cell.offset = offset;
 		cell.bytes = length;
@@ -495,32 +488,31 @@ static const  u8 r32_data[] = {
 
 static void dlink_odm_tlv_print_entry(struct kunit *test, const u8 entry, const u8 *data)
 {
-	switch (entry)
-	{
-		case DLINK_ODM_TLV_TAG_FIRMWARE_ID:
-			kunit_info(test, "Firmware ID: %s\n", data);
-			break;
-		case DLINK_ODM_TLV_TAG_HARDWARE_REVISION:
-			kunit_info(test, "Hardware Revision: %s\n", data);
-			break;
-		case DLINK_ODM_TLV_TAG_MANUFACTURING_DATE:
-			kunit_info(test, "Manufacturing Date: %s\n", data);
-			break;
-		case DLINK_ODM_TLV_TAG_DEVICE_NAME:
-			kunit_info(test, "Device Name: %s\n", data);
-			break;
-		case DLINK_ODM_TLV_TAG_DEVICE_VARIANT:
-			kunit_info(test, "Device Variant: %s\n", data);
-			break;
-		case DLINK_ODM_TLV_TAG_DEVICE_IP_ADDRESS:
-			kunit_info(test, "IP Address: %i.%i.%i.%i\n", data[0], data[1], data[2], data[3]);
-			break;
-		case DLINK_ODM_TLV_TAG_DEVICE_MAC_ADDRESS:
-			kunit_info(test, "MAC Address: %pM\n", data);
-			break;
-		default:
-			kunit_info(test, "Unknown Entry tag 0x%02x\n", entry);
-			break;
+	switch (entry) {
+	case DLINK_ODM_TLV_TAG_FIRMWARE_ID:
+		kunit_info(test, "Firmware ID: %s\n", data);
+		break;
+	case DLINK_ODM_TLV_TAG_HARDWARE_REVISION:
+		kunit_info(test, "Hardware Revision: %s\n", data);
+		break;
+	case DLINK_ODM_TLV_TAG_MANUFACTURING_DATE:
+		kunit_info(test, "Manufacturing Date: %s\n", data);
+		break;
+	case DLINK_ODM_TLV_TAG_DEVICE_NAME:
+		kunit_info(test, "Device Name: %s\n", data);
+		break;
+	case DLINK_ODM_TLV_TAG_DEVICE_VARIANT:
+		kunit_info(test, "Device Variant: %s\n", data);
+		break;
+	case DLINK_ODM_TLV_TAG_DEVICE_IP_ADDRESS:
+		kunit_info(test, "IP Address: %i.%i.%i.%i\n", data[0], data[1], data[2], data[3]);
+		break;
+	case DLINK_ODM_TLV_TAG_DEVICE_MAC_ADDRESS:
+		kunit_info(test, "MAC Address: %pM\n", data);
+		break;
+	default:
+		kunit_info(test, "Unknown Entry tag 0x%02x\n", entry);
+		break;
 	}
 }
 struct dlink_odm_tlv_test_data {
@@ -529,15 +521,26 @@ struct dlink_odm_tlv_test_data {
 	u8 *ExpectedData;
 };
 
-static void dlink_odm_tlv_basic_parse_test(struct kunit *test, const u8* data, size_t dataLength, struct dlink_odm_tlv_test_data * testData, size_t testDataLength)
+static void dlink_odm_tlv_basic_parse_test(struct kunit *test,
+	const u8 *data,
+	size_t data_length,
+	struct dlink_odm_tlv_test_data *test_data,
+	size_t testDataLength)
 {
 	for (size_t i = 0; i < testDataLength; i++) {
 		u8 buffer[255] = { 0 };
-		int ret = dlink_odm_tlv_get_entry(data, dataLength, testData[i].Entry, buffer, testData[i].EntryLength);
+		int ret = dlink_odm_tlv_get_entry(data,
+			data_length,
+			test_data[i].Entry,
+			buffer,
+			test_data[i].EntryLength);
 		KUNIT_EXPECT_EQ(test, ret, 0);
 		if (ret == 0) {
-			dlink_odm_tlv_print_entry(test, testData[i].Entry, buffer);
-			KUNIT_EXPECT_MEMEQ(test, testData[i].ExpectedData, buffer, testData[i].EntryLength);
+			dlink_odm_tlv_print_entry(test, test_data[i].Entry, buffer);
+			KUNIT_EXPECT_MEMEQ(test,
+				test_data[i].ExpectedData,
+				buffer,
+				test_data[i].EntryLength);
 		}
 	}
 }
@@ -546,13 +549,16 @@ static void dlink_odm_tlv_basic_parse_test_e30(struct kunit *test)
 {
 	struct dlink_odm_tlv_test_data test_data[] = {
 		{ DLINK_ODM_TLV_TAG_DEVICE_IP_ADDRESS, 4, (u8[]){ 192, 168, 200, 50 } },
-		{ DLINK_ODM_TLV_TAG_DEVICE_MAC_ADDRESS, 6, (u8[]){ 0x88, 0x76, 0xB9, 0x56, 0xA5, 0x1B } },
+		{
+			DLINK_ODM_TLV_TAG_DEVICE_MAC_ADDRESS,
+			6,
+			(u8[]){ 0x88, 0x76, 0xB9, 0x56, 0xA5, 0x1B }
+		},
 		{ DLINK_ODM_TLV_TAG_DEVICE_NAME, 4, "E30" },
 		{ DLINK_ODM_TLV_TAG_DEVICE_VARIANT, 4, "E30" },
 	};
 
-	dlink_odm_tlv_basic_parse_test(
-		test,
+	dlink_odm_tlv_basic_parse_test(test,
 		e30_data,
 		sizeof(e30_data),
 		test_data,
@@ -563,13 +569,16 @@ static void dlink_odm_tlv_basic_parse_test_m30(struct kunit *test)
 {
 	struct dlink_odm_tlv_test_data test_data[] = {
 		{ DLINK_ODM_TLV_TAG_DEVICE_IP_ADDRESS, 4, (u8[]){ 192, 168, 200, 1 } },
-		{ DLINK_ODM_TLV_TAG_DEVICE_MAC_ADDRESS, 6, (u8[]){ 0xC8, 0x78, 0x7D, 0xEB, 0x69, 0x86 } },
+		{
+			DLINK_ODM_TLV_TAG_DEVICE_MAC_ADDRESS,
+			6,
+			(u8[]){ 0xC8, 0x78, 0x7D, 0xEB, 0x69, 0x86 }
+		},
 		{ DLINK_ODM_TLV_TAG_DEVICE_NAME, 4, "M30" },
 		{ DLINK_ODM_TLV_TAG_DEVICE_VARIANT, 4, "M30" },
 	};
 
-	dlink_odm_tlv_basic_parse_test(
-		test,
+	dlink_odm_tlv_basic_parse_test(test,
 		m30_data,
 		sizeof(m30_data),
 		test_data,
@@ -580,13 +589,16 @@ static void dlink_odm_tlv_basic_parse_test_m32(struct kunit *test)
 {
 	struct dlink_odm_tlv_test_data test_data[] = {
 		{ DLINK_ODM_TLV_TAG_DEVICE_IP_ADDRESS, 4, (u8[]){ 192, 168, 0, 1 } },
-		{ DLINK_ODM_TLV_TAG_DEVICE_MAC_ADDRESS, 6, (u8[]){ 0x04, 0xBA, 0xD6, 0x50, 0xD0, 0x01 } },
+		{
+			DLINK_ODM_TLV_TAG_DEVICE_MAC_ADDRESS,
+			6,
+			(u8[]){ 0x04, 0xBA, 0xD6, 0x50, 0xD0, 0x01 }
+		},
 		{ DLINK_ODM_TLV_TAG_DEVICE_NAME, 4, "M32" },
 		{ DLINK_ODM_TLV_TAG_DEVICE_VARIANT, 6, "M32-2" },
 	};
 
-	dlink_odm_tlv_basic_parse_test(
-		test,
+	dlink_odm_tlv_basic_parse_test(test,
 		m32_data,
 		sizeof(m32_data),
 		test_data,
@@ -597,13 +609,16 @@ static void dlink_odm_tlv_basic_parse_test_m60(struct kunit *test)
 {
 	struct dlink_odm_tlv_test_data test_data[] = {
 		{ DLINK_ODM_TLV_TAG_DEVICE_IP_ADDRESS, 4, (u8[]){ 192, 168, 200, 1 } },
-		{ DLINK_ODM_TLV_TAG_DEVICE_MAC_ADDRESS, 6, (u8[]){ 0x40, 0x86, 0xCB, 0xD5, 0x9A, 0x52 } },
+		{
+			DLINK_ODM_TLV_TAG_DEVICE_MAC_ADDRESS,
+			6,
+			(u8[]){ 0x40, 0x86, 0xCB, 0xD5, 0x9A, 0x52 }
+		},
 		{ DLINK_ODM_TLV_TAG_DEVICE_NAME, 4, "M60" },
 		{ DLINK_ODM_TLV_TAG_DEVICE_VARIANT, 4, "M60" },
 	};
 
-	dlink_odm_tlv_basic_parse_test(
-		test,
+	dlink_odm_tlv_basic_parse_test(test,
 		m60_data,
 		sizeof(m60_data),
 		test_data,
@@ -614,13 +629,16 @@ static void dlink_odm_tlv_basic_parse_test_m60_2(struct kunit *test)
 {
 	struct dlink_odm_tlv_test_data test_data[] = {
 		{ DLINK_ODM_TLV_TAG_DEVICE_IP_ADDRESS, 4, (u8[]){ 192, 168, 200, 1 } },
-		{ DLINK_ODM_TLV_TAG_DEVICE_MAC_ADDRESS, 6, (u8[]){ 0xDC, 0xEA, 0xE7, 0xAE, 0xB8, 0x24 } },
+		{
+			DLINK_ODM_TLV_TAG_DEVICE_MAC_ADDRESS,
+			6,
+			(u8[]){ 0xDC, 0xEA, 0xE7, 0xAE, 0xB8, 0x24 }
+		},
 		{ DLINK_ODM_TLV_TAG_DEVICE_NAME, 4, "M60" },
 		{ DLINK_ODM_TLV_TAG_DEVICE_VARIANT, 6, "M60-2" },
 	};
 
-	dlink_odm_tlv_basic_parse_test(
-		test,
+	dlink_odm_tlv_basic_parse_test(test,
 		m60_2_data,
 		sizeof(m60_2_data),
 		test_data,
@@ -631,13 +649,16 @@ static void dlink_odm_tlv_basic_parse_test_r32(struct kunit *test)
 {
 	struct dlink_odm_tlv_test_data test_data[] = {
 		{ DLINK_ODM_TLV_TAG_DEVICE_IP_ADDRESS, 4, (u8[]){ 192, 168, 0, 1 } },
-		{ DLINK_ODM_TLV_TAG_DEVICE_MAC_ADDRESS, 6, (u8[]){ 0x64, 0x29, 0x43, 0x9D, 0xC5, 0xD0 } },
+		{
+			DLINK_ODM_TLV_TAG_DEVICE_MAC_ADDRESS,
+			6,
+			(u8[]){ 0x64, 0x29, 0x43, 0x9D, 0xC5, 0xD0 }
+		},
 		{ DLINK_ODM_TLV_TAG_DEVICE_NAME, 4, "R32" },
 		{ DLINK_ODM_TLV_TAG_DEVICE_VARIANT, 4, "R32" },
 	};
 
-	dlink_odm_tlv_basic_parse_test(
-		test,
+	dlink_odm_tlv_basic_parse_test(test,
 		r32_data,
 		sizeof(r32_data),
 		test_data,
