@@ -418,70 +418,91 @@ struct dlink_odm_tlv_test_data {
 	u8* ExpectedData;
 };
 
-static void dlink_odm_tlv_basic_parse_test_e30(struct kunit *test)
+static void dlink_odm_tlv_basic_parse_test(struct kunit *test, u8* data, size_t dataLength, struct dlink_odm_tlv_test_data * testData, size_t testDataLength)
 {
-    int ret;
-	u8 buffer[255];
-	struct dlink_odm_tlv_test_data test_data[2] = {
-		{ DLINK_ODM_TLF_TAG_DEVICE_IP_ADDRESS, 4, (u8[]){192, 168, 200, 50 } },
-		{ DLINK_ODM_TLF_TAG_DEVICE_MAC_ADDRESS, 6, (u8[]){0x11, 0x22, 0x33, 0x44, 0x55, 0x66 } }
-	};
-
-	for (u8 i = 0; i < 2; i++)
+	for (size_t i = 0; i < testDataLength; i++)
 	{
-		ret = dlink_odm_tlv_get_entry(e30_data, sizeof(e30_data), test_data[i].Entry, buffer, test_data[i].EntryLength);
+		u8 buffer[255] = { 0 };
+		int ret = dlink_odm_tlv_get_entry(data, dataLength, testData[i].Entry, buffer, testData[i].EntryLength);
+		KUNIT_EXPECT_EQ(test, ret, 0);
 		if (ret == 0)
 		{
-			dlink_odm_tlf_print_entry(test, test_data[i].Entry, buffer);
+			dlink_odm_tlf_print_entry(test, testData[i].Entry, buffer);
+			KUNIT_EXPECT_MEMEQ(test, testData[i].ExpectedData, buffer, testData[i].EntryLength);
 		}
-
-		KUNIT_EXPECT_EQ(test, ret, 0);
 	}
+}
+
+static void dlink_odm_tlv_basic_parse_test_e30(struct kunit *test)
+{
+	struct dlink_odm_tlv_test_data test_data[] = {
+		{ DLINK_ODM_TLF_TAG_DEVICE_IP_ADDRESS, 4, (u8[]){ 192, 168, 200, 50 } },
+		{ DLINK_ODM_TLF_TAG_DEVICE_MAC_ADDRESS, 6, (u8[]){ 0x88, 0x76, 0xB9, 0x56, 0xA5, 0x1B } },
+		{ DLINK_ODM_TLV_TAG_DEVICE_NAME, 4, "E30" },
+		{ DLINK_ODM_TLV_TAG_DEVICE_VARIANT, 4, "E30" },
+	};
+
+	dlink_odm_tlv_basic_parse_test(test, e30_data, sizeof(e30_data), test_data, ARRAY_SIZE(test_data));
 }
 
 static void dlink_odm_tlv_basic_parse_test_m30(struct kunit *test)
 {
-    int ret;
+	struct dlink_odm_tlv_test_data test_data[] = {
+		{ DLINK_ODM_TLF_TAG_DEVICE_IP_ADDRESS, 4, (u8[]){ 192, 168, 200, 1 } },
+		{ DLINK_ODM_TLF_TAG_DEVICE_MAC_ADDRESS, 6, (u8[]){ 0xC8, 0x78, 0x7D, 0xEB, 0x69, 0x86 } },
+		{ DLINK_ODM_TLV_TAG_DEVICE_NAME, 4, "M30" },
+		{ DLINK_ODM_TLV_TAG_DEVICE_VARIANT, 4, "M30" },
+	};
 
-    ret = dlink_odm_tlv_parse(m30_data, sizeof(m30_data));
-
-    KUNIT_EXPECT_EQ(test, ret, 0);
+	dlink_odm_tlv_basic_parse_test(test, m30_data, sizeof(m30_data), test_data, ARRAY_SIZE(test_data));
 }
 
 static void dlink_odm_tlv_basic_parse_test_m32(struct kunit *test)
 {
-    int ret;
+	struct dlink_odm_tlv_test_data test_data[] = {
+		{ DLINK_ODM_TLF_TAG_DEVICE_IP_ADDRESS, 4, (u8[]){ 192, 168, 0, 1 } },
+		{ DLINK_ODM_TLF_TAG_DEVICE_MAC_ADDRESS, 6, (u8[]){ 0x04, 0xBA, 0xD6, 0x50, 0xD0, 0x01 } },
+		{ DLINK_ODM_TLV_TAG_DEVICE_NAME, 4, "M32" },
+		/* Not supported for this device: { DLINK_ODM_TLV_TAG_DEVICE_VARIANT, 4, "M32" }, */
+	};
 
-	ret = dlink_odm_tlv_parse(m32_data, sizeof(m32_data));
-
-    KUNIT_EXPECT_EQ(test, ret, 0);
+	dlink_odm_tlv_basic_parse_test(test, m32_data, sizeof(m32_data), test_data, ARRAY_SIZE(test_data));
 }
 
 static void dlink_odm_tlv_basic_parse_test_m60(struct kunit *test)
 {
-    int ret;
+	struct dlink_odm_tlv_test_data test_data[] = {
+		{ DLINK_ODM_TLF_TAG_DEVICE_IP_ADDRESS, 4, (u8[]){ 192, 168, 200, 1 } },
+		{ DLINK_ODM_TLF_TAG_DEVICE_MAC_ADDRESS, 6, (u8[]){ 0x40, 0x86, 0xCB, 0xD5, 0x9A, 0x52 } },
+		{ DLINK_ODM_TLV_TAG_DEVICE_NAME, 4, "M60" },
+		{ DLINK_ODM_TLV_TAG_DEVICE_VARIANT, 4, "M60" },
+	};
 
-	ret = dlink_odm_tlv_parse(m60_data, sizeof(m60_data));
-
-    KUNIT_EXPECT_EQ(test, ret, 0);
+	dlink_odm_tlv_basic_parse_test(test, m60_data, sizeof(m60_data), test_data, ARRAY_SIZE(test_data));
 }
 
 static void dlink_odm_tlv_basic_parse_test_m60_2(struct kunit *test)
 {
-    int ret;
+	struct dlink_odm_tlv_test_data test_data[] = {
+		{ DLINK_ODM_TLF_TAG_DEVICE_IP_ADDRESS, 4, (u8[]){ 192, 168, 200, 1 } },
+		{ DLINK_ODM_TLF_TAG_DEVICE_MAC_ADDRESS, 6, (u8[]){ 0xDC, 0xEA, 0xE7, 0xAE, 0xB8, 0x24 } },
+		{ DLINK_ODM_TLV_TAG_DEVICE_NAME, 4, "M60" },
+		{ DLINK_ODM_TLV_TAG_DEVICE_VARIANT, 6, "M60-2" },
+	};
 
-	ret = dlink_odm_tlv_parse(m60_2_data, sizeof(m60_2_data));
-
-    KUNIT_EXPECT_EQ(test, ret, 0);
+	dlink_odm_tlv_basic_parse_test(test, m60_2_data, sizeof(m60_2_data), test_data, ARRAY_SIZE(test_data));
 }
 
 static void dlink_odm_tlv_basic_parse_test_r32(struct kunit *test)
 {
-    int ret;
+	struct dlink_odm_tlv_test_data test_data[] = {
+		{ DLINK_ODM_TLF_TAG_DEVICE_IP_ADDRESS, 4, (u8[]){ 192, 168, 0, 1 } },
+		{ DLINK_ODM_TLF_TAG_DEVICE_MAC_ADDRESS, 6, (u8[]){ 0x64, 0x29, 0x43, 0x9D, 0xC5, 0xD0 } },
+		{ DLINK_ODM_TLV_TAG_DEVICE_NAME, 4, "R32" },
+		/* Not supported for this device: { DLINK_ODM_TLV_TAG_DEVICE_VARIANT, 4, "M32" }, */
+	};
 
-	ret = dlink_odm_tlv_parse(r32_data, sizeof(r32_data));
-
-    KUNIT_EXPECT_EQ(test, ret, 0);
+	dlink_odm_tlv_basic_parse_test(test, r32_data, sizeof(r32_data), test_data, ARRAY_SIZE(test_data));
 }
 
 static struct kunit_case dlink_odm_tlv_testcases[] = {
