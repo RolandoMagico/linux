@@ -37,35 +37,49 @@ struct dlink_odm_tlv_header {
 /* Only the first 256 bytes of the ODM partition are interesting */
 #define DLINK_ODM_TLV_REQUIRED_DATA_SIZE			(256)
 
+static bool dlink_odm_tlv_hdr_is_valid(const u8* data)
+{
+	return ((data[0] == DLINK_ODM_TLV_PARTITION_HEADER_BYTE_0) &&
+			(data[1] == DLINK_ODM_TLV_PARTITION_HEADER_BYTE_1) &&
+			(data[2] == DLINK_ODM_TLV_PARTITION_HEADER_BYTE_2) &&
+			(data[3] == DLINK_ODM_TLV_PARTITION_HEADER_BYTE_3));
+}
+
 static int dlink_odm_tlv_find_entry(const u8 *data, size_t len, u8 entry, size_t *entryOffset, size_t *entryLength)
 {
 	int result = EINVAL;
 	size_t offset = DLINK_ODM_TLV_PARTITION_HEADER_LENGTH;
 
-	while ((offset + sizeof(struct dlink_odm_tlv_header)) <= len)
+	if (!dlink_odm_tlv_hdr_is_valid(data))
 	{
-		struct dlink_odm_tlv_header header;
-		memcpy(&header, data + offset, sizeof(header));
-
-		size_t tempEntryLength = le16_to_cpu(header.length);
-		if (!tempEntryLength)
+		result = -EINVAL;
+	}
+	else {
+		while ((offset + sizeof(struct dlink_odm_tlv_header)) <= len)
 		{
-			return -EINVAL;
-		}
+			struct dlink_odm_tlv_header header;
+			memcpy(&header, data + offset, sizeof(header));
 
-		offset += sizeof(struct dlink_odm_tlv_header);
-		
-		if (offset + tempEntryLength <= len)
-		{
-			if (header.tag == entry)
+			size_t tempEntryLength = le16_to_cpu(header.length);
+			if (!tempEntryLength)
 			{
-				*entryOffset = offset;
-				*entryLength = tempEntryLength;
-				return 0;
+				return -EINVAL;
 			}
-		}
 
-		offset += tempEntryLength;
+			offset += sizeof(struct dlink_odm_tlv_header);
+			
+			if (offset + tempEntryLength <= len)
+			{
+				if (header.tag == entry)
+				{
+					*entryOffset = offset;
+					*entryLength = tempEntryLength;
+					return 0;
+				}
+			}
+
+			offset += tempEntryLength;
+		}
 	}
 	
 	return result;
@@ -85,14 +99,6 @@ static int dlink_odm_tlv_get_entry(const u8 *data, size_t len, u8 entry, u8* buf
 	}
 	
 	return result;
-}
-
-static bool dlink_odm_tlv_hdr_is_valid(const u8* data)
-{
-	return ((data[0] == DLINK_ODM_TLV_PARTITION_HEADER_BYTE_0) &&
-		(data[1] == DLINK_ODM_TLV_PARTITION_HEADER_BYTE_1) &&
-		(data[2] == DLINK_ODM_TLV_PARTITION_HEADER_BYTE_2) &&
-		(data[3] == DLINK_ODM_TLV_PARTITION_HEADER_BYTE_3));
 }
 
 static int dlink_odm_tlv_add_cells(struct nvmem_layout *layout)
@@ -317,7 +323,7 @@ struct dlink_odm_tlv_test_data {
 	u8* ExpectedData;
 };
 
-static void dlink_odm_tlv_basic_parse_test(struct kunit *test, u8* data, size_t dataLength, struct dlink_odm_tlv_test_data * testData, size_t testDataLength)
+static void dlink_odm_tlv_basic_parse_test(struct kunit *test, const u8* data, size_t dataLength, struct dlink_odm_tlv_test_data * testData, size_t testDataLength)
 {
 	for (size_t i = 0; i < testDataLength; i++)
 	{
