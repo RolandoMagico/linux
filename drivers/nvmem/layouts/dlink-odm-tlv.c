@@ -433,9 +433,9 @@ static void dlink_odm_tlv_basic_parse_test_e30(struct kunit *test)
 		{
 			dlink_odm_tlf_print_entry(test, test_data[i].Entry, buffer);
 		}
-	}
 
-    KUNIT_EXPECT_EQ(test, ret, 0);
+		KUNIT_EXPECT_EQ(test, ret, 0);
+	}
 }
 
 static void dlink_odm_tlv_basic_parse_test_m30(struct kunit *test)
