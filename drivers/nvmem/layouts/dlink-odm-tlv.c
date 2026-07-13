@@ -382,47 +382,57 @@ static u8 r32_data[] = {
 };
 
 
-static void dlink_odm_tlf_print_entry(const u8 entry, const u8* data)
+static void dlink_odm_tlf_print_entry(struct kunit *test, const u8 entry, const u8* data)
 {
 	switch (entry)
 	{
 		case DLINK_ODM_TLV_TAG_FIRMWARE_ID:
-			kunit_info("Firmware ID: %s\n", data);
+			kunit_info(test, "Firmware ID: %s\n", data);
 			break;
 		case DLINK_ODM_TLV_TAG_HARDWARE_REVISION:
-			kunit_info("Hardware Revision: %s\n", data);
+			kunit_info(test, "Hardware Revision: %s\n", data);
 			break;
 		case DLINK_ODM_TLV_TAG_MANUFACTURING_DATE:
-			kunit_info("Manufacturing Date: %s\n", data);
+			kunit_info(test, "Manufacturing Date: %s\n", data);
 			break;
 		case DLINK_ODM_TLV_TAG_DEVICE_NAME:
-			kunit_info("Device Name: %s\n", data);
+			kunit_info(test, "Device Name: %s\n", data);
 			break;
 		case DLINK_ODM_TLV_TAG_DEVICE_VARIANT:
-			kunit_info("Device Variant: %s\n", data);
+			kunit_info(test, "Device Variant: %s\n", data);
 			break;
 		case DLINK_ODM_TLF_TAG_DEVICE_IP_ADDRESS:
-			kunit_info("Device IP Address: %i.%i.%i.%i\n", data[0], data[1], data[2], data[3]);
+			kunit_info(test, "Device IP Address: %i.%i.%i.%i\n", data[0], data[1], data[2], data[3]);
 			break;
 		case DLINK_ODM_TLF_TAG_DEVICE_MAC_ADDRESS:
-			kunit_info("Device IP Address: %02x:%02x:%02x:%02x:%02x:%02x\n", data[0], data[1], data[2], data[3], data[4], data[5]);
+			kunit_info(test, "Device IP Address: %02x:%02x:%02x:%02x:%02x:%02x\n", data[0], data[1], data[2], data[3], data[4], data[5]);
 			break;
 		default:
-			kunit_info("Unkown Entry tag 0x%02x\n", entry);
+			kunit_info(test, "Unkown Entry tag 0x%02x\n", entry);
 			break;
 	}
 }
+struct dlink_odm_tlv_test_data {
+	u8 Entry;
+	u8 EntryLength;
+	u8* ExpectedData;
+};
 
 static void dlink_odm_tlv_basic_parse_test_e30(struct kunit *test)
 {
     int ret;
-	u8 mac[6];
-	u8 entry = DLINK_ODM_TLF_TAG_DEVICE_MAC_ADDRESS;
+	u8 buffer[255];
+	struct dlink_odm_tlv_test_data test_data[1] = {
+		{DLINK_ODM_TLF_TAG_DEVICE_MAC_ADDRESS, 6, {0x11, 0x22, 0x33, 0x44, 0x55, 0x66 } }
+	}
 
-	ret = dlink_odm_tlv_get_entry(e30_data, sizeof(e30_data), entry, mac, sizeof(mac));
-	if (ret == 0)
+	for (u8 i = 0; i < 1; i++)
 	{
-		dlink_odm_tlf_print_entry(entry, mac);
+		ret = dlink_odm_tlv_get_entry(e30_data, sizeof(e30_data), test_data[i].Entry, buffer, test_data[i].EntryLength);
+		if (ret == 0)
+		{
+			dlink_odm_tlf_print_entry(test, test_data[i].Entry, buffer);
+		}
 	}
 
     KUNIT_EXPECT_EQ(test, ret, 0);
