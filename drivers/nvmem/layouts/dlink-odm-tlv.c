@@ -405,7 +405,7 @@ static void dlink_odm_tlf_print_entry(struct kunit *test, const u8 entry, const 
 			kunit_info(test, "Device IP Address: %i.%i.%i.%i\n", data[0], data[1], data[2], data[3]);
 			break;
 		case DLINK_ODM_TLF_TAG_DEVICE_MAC_ADDRESS:
-			kunit_info(test, "Device IP Address: %02x:%02x:%02x:%02x:%02x:%02x\n", data[0], data[1], data[2], data[3], data[4], data[5]);
+			kunit_info(test, "Device MAC Address: %02x:%02x:%02x:%02x:%02x:%02x\n", data[0], data[1], data[2], data[3], data[4], data[5]);
 			break;
 		default:
 			kunit_info(test, "Unkown Entry tag 0x%02x\n", entry);
@@ -422,11 +422,12 @@ static void dlink_odm_tlv_basic_parse_test_e30(struct kunit *test)
 {
     int ret;
 	u8 buffer[255];
-	struct dlink_odm_tlv_test_data test_data[1] = {
-		{DLINK_ODM_TLF_TAG_DEVICE_MAC_ADDRESS, 6, {0x11, 0x22, 0x33, 0x44, 0x55, 0x66 } }
-	}
+	struct dlink_odm_tlv_test_data test_data[2] = {
+		{ DLINK_ODM_TLF_TAG_DEVICE_IP_ADDRESS, 4, (u8[]){192, 168, 200, 50 } },
+		{ DLINK_ODM_TLF_TAG_DEVICE_MAC_ADDRESS, 6, (u8[]){0x11, 0x22, 0x33, 0x44, 0x55, 0x66 } }
+	};
 
-	for (u8 i = 0; i < 1; i++)
+	for (u8 i = 0; i < 2; i++)
 	{
 		ret = dlink_odm_tlv_get_entry(e30_data, sizeof(e30_data), test_data[i].Entry, buffer, test_data[i].EntryLength);
 		if (ret == 0)
