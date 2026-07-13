@@ -463,7 +463,7 @@ static void dlink_odm_tlv_basic_parse_test_m32(struct kunit *test)
 		{ DLINK_ODM_TLF_TAG_DEVICE_IP_ADDRESS, 4, (u8[]){ 192, 168, 0, 1 } },
 		{ DLINK_ODM_TLF_TAG_DEVICE_MAC_ADDRESS, 6, (u8[]){ 0x04, 0xBA, 0xD6, 0x50, 0xD0, 0x01 } },
 		{ DLINK_ODM_TLV_TAG_DEVICE_NAME, 4, "M32" },
-		/* Not supported for this device: { DLINK_ODM_TLV_TAG_DEVICE_VARIANT, 4, "M32" }, */
+		{ DLINK_ODM_TLV_TAG_DEVICE_VARIANT, 6, "M32-2" },
 	};
 
 	dlink_odm_tlv_basic_parse_test(test, m32_data, sizeof(m32_data), test_data, ARRAY_SIZE(test_data));
@@ -499,7 +499,7 @@ static void dlink_odm_tlv_basic_parse_test_r32(struct kunit *test)
 		{ DLINK_ODM_TLF_TAG_DEVICE_IP_ADDRESS, 4, (u8[]){ 192, 168, 0, 1 } },
 		{ DLINK_ODM_TLF_TAG_DEVICE_MAC_ADDRESS, 6, (u8[]){ 0x64, 0x29, 0x43, 0x9D, 0xC5, 0xD0 } },
 		{ DLINK_ODM_TLV_TAG_DEVICE_NAME, 4, "R32" },
-		/* Not supported for this device: { DLINK_ODM_TLV_TAG_DEVICE_VARIANT, 4, "M32" }, */
+		{ DLINK_ODM_TLV_TAG_DEVICE_VARIANT, 4, "R32" },
 	};
 
 	dlink_odm_tlv_basic_parse_test(test, r32_data, sizeof(r32_data), test_data, ARRAY_SIZE(test_data));
