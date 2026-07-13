@@ -6,7 +6,9 @@
  * Author: Roland Reinl <reinlroland+github@gmail.com>
  */
 
+#ifdef CONFIG_NVMEM_LAYOUT_DLINK_ODM_TLV_KUNIT_TEST
 #include <kunit/test.h>
+#endif
 #include <linux/etherdevice.h>
 #include <linux/nvmem-consumer.h>
 #include <linux/nvmem-provider.h>
@@ -47,14 +49,17 @@ static bool dlink_odm_tlv_hdr_is_valid(const u8* data)
 
 static int dlink_odm_tlv_find_entry(const u8 *data, size_t len, u8 entry, size_t *entryOffset, size_t *entryLength)
 {
-	int result = EINVAL;
+	int result = -EINVAL;
+
+	if (!data || len < DLINK_ODM_TLV_PARTITION_HEADER_LENGTH)
+		return -EINVAL;
+
 	size_t offset = DLINK_ODM_TLV_PARTITION_HEADER_LENGTH;
 
 	if (!dlink_odm_tlv_hdr_is_valid(data))
 	{
 		result = -EINVAL;
-	}
-	else {
+	} else {
 		while ((offset + sizeof(struct dlink_odm_tlv_header)) <= len)
 		{
 			struct dlink_odm_tlv_header header;
@@ -87,7 +92,7 @@ static int dlink_odm_tlv_find_entry(const u8 *data, size_t len, u8 entry, size_t
 
 static int dlink_odm_tlv_get_entry(const u8 *data, size_t len, u8 entry, u8* buffer, size_t bufferLen)
 {
-	int result = EINVAL;
+	int result = -EINVAL;
 	size_t offset, length;
 	if (dlink_odm_tlv_find_entry(data, len, entry, &offset, &length) == 0)
 	{
@@ -97,7 +102,7 @@ static int dlink_odm_tlv_get_entry(const u8 *data, size_t len, u8 entry, u8* buf
 			result = 0;
 		}
 	}
-	
+
 	return result;
 }
 
